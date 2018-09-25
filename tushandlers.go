@@ -68,6 +68,7 @@ func (serv *UploadServer) registerTusHandlers(r *gin.Engine, store *shardedfiles
 		StoreComposer:           composer,
 		MaxSize:                 int64(maximumUploadSize.Bytes()),
 		Logger:                  goLog.New(ioutil.Discard, "", 0),
+		RespectForwardedHeaders: true,
 		NotifyCompleteUploads:   true,
 		NotifyCreatedUploads:    true,
 		NotifyTerminatedUploads: true,
