@@ -17,6 +17,7 @@ import (
 type Config struct {
 	Server struct {
 		ListenAddress             string
+		BindMode                  string
 		BasePath                  string
 		CorsOrigins               []string
 		TrustedReverseProxyRanges []ipnet

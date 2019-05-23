@@ -1,8 +1,14 @@
 package server
 
 import (
+	"net"
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
 	"sync"
+	
+	
 
 	"github.com/gin-gonic/gin"
 	"github.com/kiwiirc/plugin-fileuploader/db"
@@ -81,12 +87,30 @@ func (serv *UploadServer) Run(replaceableHandler *ReplaceableHandler) error {
 	}
 
 	// otherwise run our own http server
-	serv.httpServer = &http.Server{
-		Addr:    serv.cfg.Server.ListenAddress,
-		Handler: serv.Router,
-	}
+	if strings.HasPrefix(strings.ToLower(serv.cfg.Server.ListenAddress), "unix:") {
+		socketFile := serv.cfg.Server.ListenAddress[5:]
+		server, serverErr := net.Listen("unix", socketFile)
+		if serverErr != nil {
+			return serverErr
+		}
 
-	return serv.httpServer.ListenAndServe()
+		// parse the mode string and chmod the sock
+		intMode, err := strconv.ParseInt(serv.cfg.Server.BindMode, 8, 32)
+		if err != nil {
+			intMode = 0755
+		}
+		bindMode := os.FileMode(intMode)
+		os.Chmod(socketFile, bindMode)
+
+		return http.Serve(server, serv.Router)
+	} else {
+		serv.httpServer = &http.Server{
+			Addr:    serv.cfg.Server.ListenAddress,
+			Handler: serv.Router,
+		}
+
+		return serv.httpServer.ListenAndServe()
+	}
 }
 
 // Shutdown gracefully terminates the UploadServer instance.
