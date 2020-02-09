@@ -1,4 +1,4 @@
-module github.com/kiwiirc/plugin-fileuploader
+module github.com/itsonlybinary/plugin-fileuploader
 
 go 1.12
 
