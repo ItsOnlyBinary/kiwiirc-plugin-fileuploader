@@ -76,6 +76,11 @@ func (serv *UploadServer) Run(replaceableHandler *ReplaceableHandler) error {
 		return err
 	}
 
+	err = serv.registerOembedHandlers(serv.Router, serv.store)
+	if err != nil {
+		return err
+	}
+
 	// closed channel indicates that startup is complete
 	close(serv.GetStartedChan())
 

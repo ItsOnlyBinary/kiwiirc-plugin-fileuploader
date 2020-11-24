@@ -11,15 +11,21 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/jpeg"
+	_ "image/png"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	_ "github.com/go-sql-driver/mysql" // register mysql driver
 	_ "github.com/mattn/go-sqlite3"    // register SQL driver
+	"github.com/nfnt/resize"
 
 	"github.com/kiwiirc/plugin-fileuploader/db"
 	"github.com/rs/zerolog"
@@ -28,6 +34,7 @@ import (
 
 var defaultFilePerm = os.FileMode(0664)
 var defaultDirectoryPerm = os.FileMode(0775)
+var isImage = regexp.MustCompile(`\.(jpe?g|png)$`)
 
 // ShardedFileStore implements various tusd.DataStore-related interfaces.
 // See the interfaces for more documentation about the different methods.
@@ -298,7 +305,14 @@ func (upload *fileUpload) FinishUpload(ctx context.Context) error {
 
 	if err == nil {
 		upload.info.Storage["Path"] = newPath
+		upload.binPath = newPath
 		err = upload.writeInfo()
+	}
+	spew.Dump(upload.info)
+	fileName := upload.info.MetaData["filename"]
+	if fileName != "" && isImage.MatchString(fileName) {
+		fmt.Println("is Image")
+		upload.store.generateThumbnail(upload)
 	}
 
 	return err
@@ -512,4 +526,39 @@ func (store ShardedFileStore) completeBinPath(hashBytes []byte) string {
 	hash := fmt.Sprintf("%x", hashBytes)
 	shards := store.shards(hash)
 	return filepath.Join(store.BasePath, "complete", shards, hash+".bin")
+}
+
+func (store ShardedFileStore) thumbnailBinPath(id string) string {
+	// finished: <base-path>/thumbnail/<hash-shards>/<hash>.bin
+	hashBytes, isFinal, err := store.lookupHash(id)
+	if err != nil {
+		store.log.Fatal().Err(err).Msg("Could not look up hash for thumbnail")
+	}
+	if !isFinal {
+		return ""
+	}
+	hash := fmt.Sprintf("%x", hashBytes)
+	shards := store.shards(hash)
+	return filepath.Join(store.BasePath, "thumbnail", shards, hash+".bin")
+}
+
+func (store ShardedFileStore) generateThumbnail(upload *fileUpload) error {
+	imagePath, err := os.Open(upload.binPath)
+	if err != nil {
+		fmt.Println("file error", err)
+	}
+	defer imagePath.Close()
+	srcImage, _, err := image.Decode(imagePath)
+	if err != nil {
+		fmt.Println("decode error", err)
+	}
+	dstImage := resize.Thumbnail(100, 100, srcImage, resize.Bilinear)
+
+	newPath := store.thumbnailBinPath(upload.info.ID)
+	os.MkdirAll(filepath.Dir(newPath), defaultDirectoryPerm)
+	newImage, _ := os.Create(newPath)
+	defer newImage.Close()
+	jpeg.Encode(newImage, dstImage, &jpeg.Options{jpeg.DefaultQuality})
+
+	return nil
 }
