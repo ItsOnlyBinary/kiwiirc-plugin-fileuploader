@@ -4,6 +4,9 @@
 # including HTTPS if configured.
 ListenAddress = "127.0.0.1:8088"
 
+# When using unix: address what permissions should be set on the socket
+BindMode = 0770
+
 # When running as a webircgateway plugin, this path will be relative to the
 # webircgateway domain, e.g. https://ws.irc.example.com/files
 BasePath = "/files"

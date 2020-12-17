@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ type LoggerConfig struct {
 type Config struct {
 	Server struct {
 		ListenAddress             string
+		BindMode                  fileMode
 		BasePath                  string
 		CorsOrigins               []string
 		TrustedReverseProxyRanges []ipnet
@@ -152,6 +154,21 @@ func (l *logLevel) UnmarshalText(text []byte) error {
 	level, err := zerolog.ParseLevel(levelStr)
 	l.Level = level
 	return err
+}
+
+////////////////////////////////////////////////////////////////
+
+type fileMode struct {
+	os.FileMode
+}
+
+func (m *fileMode) UnmarshalText(text []byte) error {
+	mode, err := strconv.ParseInt(string(text), 8, 32)
+	if err != nil {
+		return err
+	}
+	m.FileMode = os.FileMode(mode)
+	return nil
 }
 
 ////////////////////////////////////////////////////////////////

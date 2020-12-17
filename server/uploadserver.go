@@ -1,7 +1,10 @@
 package server
 
 import (
+	"net"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -83,6 +86,23 @@ func (serv *UploadServer) Run(replaceableHandler *ReplaceableHandler) error {
 		// set ReplaceableHandler that's mounted in an external server
 		replaceableHandler.Handler = serv.Router
 		return nil
+	}
+
+	if strings.HasPrefix(strings.ToLower(serv.cfg.Server.ListenAddress), "unix:") {
+		socketFile := serv.cfg.Server.ListenAddress[5:]
+		os.Remove(socketFile)
+
+		server, err := net.Listen("unix", socketFile)
+		if err != nil {
+			return err
+		}
+
+		err = os.Chmod(socketFile, serv.cfg.Server.BindMode.FileMode)
+		if err != nil {
+			return err
+		}
+
+		return http.Serve(server, serv.Router)
 	}
 
 	// otherwise run our own http server

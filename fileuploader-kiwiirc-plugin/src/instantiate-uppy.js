@@ -2,6 +2,7 @@ import Uppy from '@uppy/core'
 import Dashboard from '@uppy/dashboard'
 import Tus from '@uppy/tus'
 import Webcam from '@uppy/webcam'
+import it_IT from '@uppy/locales/lib/it_IT'
 
 import { KiB } from './constants/data-size'
 import acquireExtjwtBeforeUpload from './handlers/uppy/acquire-extjwt-before-upload'
@@ -37,6 +38,7 @@ export default function instantiateUppy({
             // throws if invalid, cancelling the file add
             getValidUploadTarget(kiwiApi)
         },
+        locale: it_IT,
         onBeforeUpload: handleBeforeUpload,
         restrictions: {
             maxFileSize: kiwiApi.state.setting('fileuploader.maxFileSize'),
@@ -47,6 +49,7 @@ export default function instantiateUppy({
     const uppy = Uppy(effectiveUppyOpts)
         .use(Dashboard, effectiveDashboardOpts)
         .use(Webcam, { target: Dashboard })
+        .use(Webcam, { id: 'webcam-audio', title: 'Audio', target: Dashboard, modes: [ 'audio-only'] })
         .use(Tus, effectiveTusOpts)
         .run()
 

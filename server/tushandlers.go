@@ -289,7 +289,7 @@ var ErrInvalidXForwardedFor = errors.New("Failed to parse IP from X-Forwarded-Fo
 func (serv *UploadServer) getDirectOrForwardedRemoteIP(req *http.Request) (string, error) {
 	// extract direct IP
 	remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
-	if err != nil {
+	if req.RemoteAddr != "@" && err != nil {
 		serv.log.Error().
 			Err(err).
 			Msg("Could not split address into host and port")
@@ -298,7 +298,7 @@ func (serv *UploadServer) getDirectOrForwardedRemoteIP(req *http.Request) (strin
 
 	// use X-Forwarded-For header if direct IP is a trusted reverse proxy
 	if forwardedFor := req.Header.Get("X-Forwarded-For"); forwardedFor != "" {
-		if serv.remoteIPisTrusted(net.ParseIP(remoteIP)) {
+		if req.RemoteAddr == "@" || serv.remoteIPisTrusted(net.ParseIP(remoteIP)) {
 			// We do not check intermediary proxies against the whitelist.
 			// If a trusted proxy is appending to and forwarding the value of the
 			// header it is receiving, that is an implicit expression of trust
