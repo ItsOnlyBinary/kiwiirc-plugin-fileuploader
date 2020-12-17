@@ -59,6 +59,11 @@ type Config struct {
 		FallbackProviderFile     string
 		FallbackProviderJsonKey  string
 	}
+
+	Manage struct {
+		Enabled bool
+		Users   map[string]string
+	}
 }
 
 func NewConfig() *Config {

@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kiwiirc/plugin-fileuploader/controlpanel"
 	"github.com/kiwiirc/plugin-fileuploader/db"
 	"github.com/kiwiirc/plugin-fileuploader/events"
 	"github.com/kiwiirc/plugin-fileuploader/expirer"
@@ -74,12 +75,16 @@ func (serv *UploadServer) Run(replaceableHandler *ReplaceableHandler) error {
 		serv.log,
 	)
 
-	err = serv.registerWebPreviewHandlers(serv.Router, serv.cfg)
+	if serv.cfg.Manage.Enabled {
+		controlpanel.New(serv.Router, serv.DBConn, serv.store, serv.cfg.Manage.Users)
+	}
+
+	err := serv.registerWebPreviewHandlers(serv.Router, serv.cfg)
 	if err != nil {
 		return err
 	}
 
-	err := serv.registerTusHandlers(serv.Router, serv.store)
+	err = serv.registerTusHandlers(serv.Router, serv.store)
 	if err != nil {
 		return err
 	}

@@ -57,6 +57,13 @@ FallbackProviderURL = "https://noembed.com/embed?url={url}"
 FallbackProviderFile = "fallback-providers.json"
 FallbackProviderJsonKey = "html"
 
+[Manage]
+Enabled = true
+
+[Manage.Users]
+#"user1" = "some_sha256_encoded_password"
+#"user2" = "some_other_sha256_encoded_password"
+
 # If EXTJWT is supported by the gateway or network, a validated token with an account present (when
 # the user is authenticated to an irc services account) will use the IdentifiedMaxAge setting above
 # instead of the base MaxAge.

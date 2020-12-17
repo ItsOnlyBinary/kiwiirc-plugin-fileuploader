@@ -1,7 +1,4 @@
-package templates
-
-var Get = map[string]string{
-"controlpanel": `<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <script src="https://vuejs.org/js/vue.min.js"></script>
@@ -223,7 +220,7 @@ var Get = map[string]string{
                         // Nothing selected
                         return;
                     }
-                    if (!window.confirm(`+"`"+`This will terminate `+"`"+` + terminate.length + ' selected uploads\n\nAre you sure?')) {
+                    if (!window.confirm(`This will terminate ` + terminate.length + ' selected uploads\n\nAre you sure?')) {
                         return;
                     }
                     const resp = await fetch('/admin/del', {
@@ -244,64 +241,3 @@ var Get = map[string]string{
     </script>
 </body>
 </html>
-`,
-"webpreview": `<!DOCTYPE html>
-<html>
-    <head>
-        <style>
-            html, body {
-                margin: 0;
-                padding: 0;
-            }
-            .kiwi-embed-image {
-                display: block;
-            }
-            /* style.extras */
-        </style>
-        <script>
-            let last_width = 0;
-            let last_height = 0;
-            window.addEventListener('load', function () {
-                postDimensions();
-                const observerOptions = {
-                    childList: true,
-                    subtree: true,
-                };
-                const observer = new MutationObserver(mutationObserver);
-                observer.observe(document.body, observerOptions);
-            })
-
-            function mutationObserver() {
-                postDimensions();
-            }
-
-            function imgError() {
-                window.parent.postMessage({ error: true }, '*');
-            }
-
-            function postDimensions() {
-                if (!window.parent) {
-                    // Nowhere to send messages
-                    return;
-                }
-                const div = document.body.querySelector('#kiwi-embed-container');
-                const width = div.scrollWidth;
-                const height = div.scrollHeight;
-                if (last_width === width && last_height === height) {
-                    // No change
-                    return;
-                }
-                last_width = width;
-                last_height = height;
-                window.parent.postMessage({ dimensions: { width, height } }, '*');
-            }
-        </script>
-    </head>
-    <body>
-        <div id="kiwi-embed-container">
-            {{body.html}}
-        </div>
-    </body>
-</html>
-`,
-}

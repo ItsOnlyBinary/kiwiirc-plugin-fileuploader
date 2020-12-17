@@ -9,8 +9,9 @@ require (
 	github.com/c2h5oh/datasize v0.0.0-20171227191756-4eba002a5eae
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dyatlov/go-oembed v0.0.0-20191103150536-a57c85b3b37c
+	github.com/gin-contrib/sessions v0.0.3
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/gin-gonic/gin v1.4.0
+	github.com/gin-gonic/gin v1.5.0
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/gobuffalo/packr v1.30.1 // indirect
 	github.com/golang/mock v1.3.1 // indirect
@@ -21,7 +22,6 @@ require (
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/kiwiirc/webircgateway v0.0.0-20200226172020-f8a71090407a
 	github.com/lib/pq v1.1.1 // indirect
-	github.com/mattn/go-isatty v0.0.8 // indirect
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/orcaman/concurrent-map v0.0.0-20190826125027-8c72a8bb44f6 // indirect
@@ -39,6 +39,7 @@ require (
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	google.golang.org/appengine v1.6.1 // indirect
 	gopkg.in/Acconut/lockfile.v1 v1.1.0
+	gopkg.in/go-playground/validator.v8 v8.18.2 // indirect
 	gopkg.in/gorp.v1 v1.7.2 // indirect
 	gopkg.in/ini.v1 v1.52.0 // indirect
 	willnorris.com/go/imageproxy v0.10.0
