@@ -136,7 +136,7 @@ var Get = map[string]string{
                     uploads: [],
                     filter: '',
                     page: 1,
-                    per_page: 2,
+                    per_page: 50,
                     pages: 0,
                     select_all: false,
                     filterTimeout: 0,
