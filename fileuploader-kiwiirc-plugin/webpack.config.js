@@ -3,6 +3,8 @@ const VueLoaderPlugin = require('vue-loader/lib/plugin')
 const CompressionPlugin = require('compression-webpack-plugin')
 const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 
+const ConvertLocalesPlugin = require('./build/convert-locales')
+
 const makeSourceMap = process.argv.indexOf('--srcmap') > -1;
 const shouldCompress = /\.(js|css|html|svg)(\.map)?$/
 
@@ -35,6 +37,7 @@ module.exports = {
     },
     plugins: [
         new CleanWebpackPlugin,
+        new ConvertLocalesPlugin,
         new VueLoaderPlugin,
         new CompressionPlugin({
             test: shouldCompress,

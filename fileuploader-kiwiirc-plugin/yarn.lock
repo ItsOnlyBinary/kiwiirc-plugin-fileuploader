@@ -1103,6 +1103,11 @@
     "@uppy/utils" "^4.0.4"
     preact "^10.5.13"
 
+"@uppy/locales@^2.0.5":
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/@uppy/locales/-/locales-2.0.5.tgz#634695c35c0a5463cc29e29c3124f06a968b86b5"
+  integrity sha512-dXJj0ImVf9YIOdxUQilDDZjZZWtOcIqRYgTTjcPpMrgUiZ9vjOOxVwsimbl5X9xlyLfC7A8rWNeIXi7ipyDVzg==
+
 "@uppy/provider-views@^2.0.6":
   version "2.0.6"
   resolved "https://registry.yarnpkg.com/@uppy/provider-views/-/provider-views-2.0.6.tgz#8fe7fcaaccef01f44163d2ad43c0670651c3a8f2"

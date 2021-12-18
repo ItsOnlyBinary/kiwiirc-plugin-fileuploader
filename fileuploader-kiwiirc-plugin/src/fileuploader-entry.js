@@ -16,9 +16,18 @@ import { closeModalWhenUploadsCompleted } from './handlers/uppy/close-modal-when
 import { shareCompletedUploadUrl } from './handlers/uppy/share-completed-upload-url';
 import { trackFileUploadTarget } from './handlers/uppy/track-file-upload-target';
 import instantiateUppy from './instantiate-uppy'
+import instantiateUppyLocales from './instantiate-uppy-locales'
 import { createPromptUpload } from './prompt-upload'
 import TokenManager from './token-manager'
 import { setDefaultSetting } from './utils/set-default-setting'
+
+let scriptPath;
+
+(function() {
+    const scriptElements = document.getElementsByTagName('script');
+    const thisScriptSrc = scriptElements[scriptElements.length - 1].src;
+    scriptPath = thisScriptSrc.substring(0, thisScriptSrc.lastIndexOf( '/' ) + 1);
+})();
 
 kiwi.plugin('fileuploader', function (kiwiApi, log) {
     // default settings
@@ -45,6 +54,8 @@ kiwi.plugin('fileuploader', function (kiwiApi, log) {
         tokenManager,
         uploadFileButton,
     })
+
+    instantiateUppyLocales(kiwiApi, uppy, scriptPath)
 
     const promptUpload = createPromptUpload({ kiwiApi, tokenManager })
     // expose plugin api
