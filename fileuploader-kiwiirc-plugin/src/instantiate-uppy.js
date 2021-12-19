@@ -1,13 +1,13 @@
-import Uppy from '@uppy/core'
-import Dashboard from '@uppy/dashboard'
-import Tus from '@uppy/tus'
-import Webcam from '@uppy/webcam'
-import Audio from '@uppy/audio'
-import ImageEditor from '@uppy/image-editor'
+import Uppy from '@uppy/core';
+import Dashboard from '@uppy/dashboard';
+import Tus from '@uppy/tus';
+import Webcam from '@uppy/webcam';
+import Audio from '@uppy/audio';
+import ImageEditor from '@uppy/image-editor';
 
-import { KiB } from './constants/data-size'
-import acquireExtjwtBeforeUpload from './handlers/uppy/acquire-extjwt-before-upload'
-import { getValidUploadTarget } from './utils/get-valid-upload-target'
+import { KiB } from './constants/data-size';
+import acquireExtjwtBeforeUpload from './handlers/uppy/acquire-extjwt-before-upload';
+import { getValidUploadTarget } from './utils/get-valid-upload-target';
 
 export default function instantiateUppy({
     kiwiApi,
@@ -23,21 +23,21 @@ export default function instantiateUppy({
         closeModalOnClickOutside: true,
         note: kiwiApi.state.setting('fileuploader.note'),
         ...dashboardOptions,
-    }
+    };
 
     const effectiveTusOpts = {
         endpoint: kiwiApi.state.setting('fileuploader.server'),
         chunkSize: 512 * KiB,
         ...tusOptions,
-    }
+    };
 
-    const { handlerContext, handleBeforeUpload } = acquireExtjwtBeforeUpload(tokenManager)
+    const { handlerContext, handleBeforeUpload } = acquireExtjwtBeforeUpload(tokenManager);
 
     const effectiveUppyOpts = {
         autoProceed: false,
         onBeforeFileAdded: (/* currentFile, files */) => {
             // throws if invalid, cancelling the file add
-            getValidUploadTarget(kiwiApi)
+            getValidUploadTarget(kiwiApi);
         },
         onBeforeUpload: handleBeforeUpload,
         restrictions: {
@@ -45,7 +45,7 @@ export default function instantiateUppy({
             allowedFileTypes: kiwiApi.state.setting('fileuploader.allowedFileTypes'),
         },
         ...uppyOptions,
-    }
+    };
 
     const uppy = new Uppy(effectiveUppyOpts)
         .use(Dashboard, effectiveDashboardOpts)
@@ -55,11 +55,11 @@ export default function instantiateUppy({
             target: Dashboard,
             quality: 1,
         })
-        .use(Tus, effectiveTusOpts)
+        .use(Tus, effectiveTusOpts);
 
-    handlerContext.uppy = uppy // needs reference to uppy which didn't exist until now
+    handlerContext.uppy = uppy; // needs reference to uppy which didn't exist until now
 
-    const dashboard = uppy.getPlugin('Dashboard')
+    const dashboard = uppy.getPlugin('Dashboard');
 
-    return { uppy, dashboard }
+    return { uppy, dashboard };
 }

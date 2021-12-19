@@ -4,7 +4,7 @@
             No files have recently been uploaded...
         </div>
         <div v-else class="kiwi-filebuffer-inner-container">
-            <div v-for="(file, idx) in fileList.slice().reverse()" :key="file.url" class="kiwi-filebuffer-download-container">
+            <div v-for="file in fileList.slice().reverse()" :key="file.url" class="kiwi-filebuffer-download-container">
                 <a
                     :href="file.url"
                     class="kiwi-filebuffer-anchor"
@@ -12,29 +12,31 @@
                     title="Download File"
                     target="_blank"
                 >
-                    <i class="fa fa-download kiwi-filebuffer-downloadicon"/>
+                    <i class="fa fa-download kiwi-filebuffer-downloadicon" />
                 </a>
                 <div class="kiwi-filebuffer-filetitle" style="font-size: 18px;">
                     <a
                         :href="file.url"
-                        @click.prevent.stop="loadContent(file.url)"
                         class="kiwi-filebuffer-anchor"
                         title="Preview File"
+                        @click.prevent.stop="loadContent(file.url)"
                     >
                         {{ file.fileName }}
                     </a>
                 </div>
                 <div class="kiwi-filebuffer-fileinfo"> {{ file.nick }}</div>
                 <div class="kiwi-filebuffer-fileinfo"> {{ file.time }}</div>
-                <div style="clear: both;"></div>
+                <div style="clear: both;" />
             </div>
         </div>
     </div>
 </template>
 
 <script>
-
 'kiwi public';
+
+/* global _:true */
+/* global kiwi:true */
 
 export default {
     data() {
@@ -42,57 +44,67 @@ export default {
             settings: kiwi.state.setting('fileuploader'),
         };
     },
+    computed: {
+        fileList() {
+            let buffer = kiwi.state.getActiveBuffer();
+            if (!buffer) {
+                return [];
+            }
+            // Hack; We need to make vue aware that we depend on buffer.message_count in order to
+            // get the messagelist to update its DOM, as the change of message_count alerts
+            // us that the messages have changed. This is done so that vue does not have to make
+            // every emssage reactive which gets very expensive.
+            /* eslint-disable no-unused-vars */
+            let ignoredVar = buffer.message_count;
+            return this.sharedFiles(buffer);
+        },
+    },
     methods: {
-        getFileName(file) {
-            file = decodeURI(file);
-            let name = file.split('/')[file.split('/').length-1];
+        getFileName(rawFile) {
+            const file = decodeURI(rawFile);
+            let name = file.split('/')[file.split('/').length - 1];
             if (name.length >= 20) {
                 name = name.substring(0, 13) + '...' + name.substring(name.length - 4);
             }
             return name;
         },
         truncateNick(nick) {
-            if (nick.length >= 13) {
-                nick = nick.substring(0, 11) + "\u2026";
-            }
-            return nick;
+            return (nick.length >= 13) ?
+                nick.substring(0, 11) + '\u2026' :
+                nick;
         },
         loadContent(url) {
             kiwi.emit('mediaviewer.show', url);
         },
         sharedFiles(buffer) {
-            let returnArr = []
-            if(buffer === null) return [];
-            let messages = buffer.getMessages()
-            let tmp = buffer.message_count
-            for(let i = 0; i < messages.length; i++) {
-                let e = messages[i]
+            let returnArr = [];
+            if (buffer === null) return [];
+            let messages = buffer.getMessages();
+            console.log('server', this.settings.server, messages);
+            for (let i = 0; i < messages.length; i++) {
+                let e = messages[i];
+                console.log('msg', e);
                 if (e.message.indexOf(this.settings.server) !== -1) {
-                    let time = new Intl.DateTimeFormat('default', { hour: 'numeric', minute: 'numeric', second: 'numeric' }).format(new Date(e.time))
-                    let url = e.message.substring(e.message.indexOf(this.settings.server)).split(' ')[0].split(')')[0].split('\'')[0]
+                    let time = new Intl.DateTimeFormat('default', { hour: 'numeric', minute: 'numeric', second: 'numeric' }).format(new Date(e.time));
+                    let url = e.message.substring(e.message.indexOf(this.settings.server)).split(' ')[0].split(')')[0].split('\'')[0];
                     let link = {
                         url,
                         nick: this.truncateNick(e.nick),
                         fileName: this.getFileName(url),
-                        time
+                        time,
                     };
                     returnArr.push(link);
                 }
             }
 
             // comment out the following line to include duplicates
-            returnArr = _.uniqBy(returnArr, 'url')
+            returnArr = _.uniqBy(returnArr, 'url');
 
-            kiwi.emit('files.listshared', { fileList: returnArr, buffer })
-            return returnArr
+            kiwi.emit('files.listshared', { fileList: returnArr, buffer });
+            return returnArr;
         },
     },
-    computed: {
-        fileList() {
-            return this.sharedFiles(kiwi.state.getActiveBuffer())
-        }
-    },
-}
+};
 </script>
 
 <style scoped>
