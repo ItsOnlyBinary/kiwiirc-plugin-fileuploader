@@ -45,7 +45,10 @@ module.exports = {
     ],
     devtool: makeSourceMap ? 'source-map' : undefined,
     devServer: {
-        static: 'dist/',
+        static: {
+            directory: path.join(__dirname, 'dist'),
+            watch: false,
+        },
         compress: true,
         host: process.env.HOST || 'localhost',
         port: process.env.PORT || 41040,

@@ -11,6 +11,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/kiwiirc/plugin-fileuploader/db"
@@ -18,6 +19,7 @@ import (
 	"github.com/kiwiirc/plugin-fileuploader/logging"
 	"github.com/kiwiirc/plugin-fileuploader/shardedfilestore"
 	"github.com/tus/tusd/cmd/tusd/cli/hooks"
+	"github.com/tus/tusd/pkg/handler"
 	tusd "github.com/tus/tusd/pkg/handler"
 )
 
@@ -55,6 +57,11 @@ func customizedCors(allowedOrigins []string) gin.HandlerFunc {
 	}
 }
 
+func (serv *UploadServer) PreFinishResponseCallback(hook handler.HookEvent) error {
+	spew.Dump(hook.Upload)
+	return nil
+}
+
 func (serv *UploadServer) registerTusHandlers(r *gin.Engine, store *shardedfilestore.ShardedFileStore) error {
 	composer := tusd.NewStoreComposer()
 	store.UseIn(composer)
@@ -63,14 +70,15 @@ func (serv *UploadServer) registerTusHandlers(r *gin.Engine, store *shardedfiles
 	serv.log.Debug().Str("size", maximumUploadSize.String()).Msg("Using upload limit")
 
 	config := tusd.Config{
-		BasePath:                serv.cfg.Server.BasePath,
-		StoreComposer:           composer,
-		MaxSize:                 int64(maximumUploadSize.Bytes()),
-		Logger:                  goLog.New(ioutil.Discard, "", 0),
-		NotifyCompleteUploads:   true,
-		NotifyCreatedUploads:    true,
-		NotifyTerminatedUploads: true,
-		NotifyUploadProgress:    true,
+		BasePath:                  serv.cfg.Server.BasePath,
+		StoreComposer:             composer,
+		MaxSize:                   int64(maximumUploadSize.Bytes()),
+		Logger:                    goLog.New(ioutil.Discard, "", 0),
+		NotifyCompleteUploads:     true,
+		NotifyCreatedUploads:      true,
+		NotifyTerminatedUploads:   true,
+		NotifyUploadProgress:      true,
+		PreFinishResponseCallback: serv.PreFinishResponseCallback,
 	}
 
 	routePrefix, err := routePrefixFromBasePath(serv.cfg.Server.BasePath)
@@ -102,8 +110,17 @@ func (serv *UploadServer) registerTusHandlers(r *gin.Engine, store *shardedfiles
 
 	rg := r.Group(routePrefix)
 	rg.POST("", serv.postFile(handler))
-	rg.HEAD(":id", gin.WrapF(handler.HeadFile))
-	rg.PATCH(":id", gin.WrapF(handler.PatchFile))
+
+	headFile := gin.WrapF(handler.HeadFile)
+	rg.HEAD(":id", headFile)
+	rg.HEAD(":id/:filename", func(c *gin.Context) {
+		// rewrite request path to ":id" route pattern
+		c.Request.URL.Path = path.Join(routePrefix, url.PathEscape(c.Param("id")))
+
+		// call the normal handler
+		headFile(c)
+	})
+	rg.PATCH(":id", serv.patchFile(handler))
 
 	// Only attach the DELETE handler if the Terminate() method is provided
 	if config.StoreComposer.UsesTerminater {
@@ -135,6 +152,14 @@ func isFatalJwtError(err error) (fatal bool) {
 	}
 
 	return
+}
+
+func (serv *UploadServer) patchFile(handler *tusd.UnroutedHandler) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		handler.PatchFile(c.Writer, c.Request)
+		// spew.Dump(c.Writer.Header())
+		// spew.Dump(c.Writer.Size())
+	}
 }
 
 func (serv *UploadServer) postFile(handler *tusd.UnroutedHandler) gin.HandlerFunc {
@@ -174,7 +199,7 @@ func (serv *UploadServer) addRemoteIPToMetadata(req *http.Request) (err error) {
 	const uploadMetadataHeader = "Upload-Metadata"
 	const remoteIPKey = "RemoteIP"
 
-	metadata := parseMeta(req.Header.Get(uploadMetadataHeader))
+	metadata := handler.ParseMetadataHeader(req.Header.Get(uploadMetadataHeader))
 
 	// ensure the client doesn't attempt to specify their own RemoteIP
 	for k := range metadata {
@@ -231,14 +256,19 @@ func (serv *UploadServer) getSecretForToken(token *jwt.Token) (interface{}, erro
 
 	secret, ok := serv.cfg.JwtSecretsByIssuer[issuerStr]
 	if !ok {
-		return nil, &UnknownIssuerError{Issuer: issuerStr}
+		// Attempt to get fallback issuer
+		secret, ok = serv.cfg.JwtSecretsByIssuer["*"]
+
+		if !ok {
+			return nil, &UnknownIssuerError{Issuer: issuerStr}
+		}
 	}
 
 	return []byte(secret), nil
 }
 
 func (serv *UploadServer) processJwt(req *http.Request) (err error) {
-	metadata := parseMeta(req.Header.Get("Upload-Metadata"))
+	metadata := handler.ParseMetadataHeader(req.Header.Get("Upload-Metadata"))
 
 	// ensure the client doesn't attempt to specify their own account/issuer fields
 	for k := range metadata {
@@ -250,6 +280,7 @@ func (serv *UploadServer) processJwt(req *http.Request) (err error) {
 	}
 
 	tokenString := metadata["extjwt"]
+	delete(metadata, "extjwt")
 	if tokenString == "" {
 		return nil
 	}

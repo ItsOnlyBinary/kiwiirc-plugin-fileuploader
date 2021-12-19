@@ -80,10 +80,10 @@ export default {
             let returnArr = [];
             if (buffer === null) return [];
             let messages = buffer.getMessages();
-            console.log('server', this.settings.server, messages);
+            // console.log('server', this.settings.server, messages);
             for (let i = 0; i < messages.length; i++) {
                 let e = messages[i];
-                console.log('msg', e);
+                // console.log('msg', e);
                 if (e.message.indexOf(this.settings.server) !== -1) {
                     let time = new Intl.DateTimeFormat('default', { hour: 'numeric', minute: 'numeric', second: 'numeric' }).format(new Date(e.time));
                     let url = e.message.substring(e.message.indexOf(this.settings.server)).split(' ')[0].split(')')[0].split('\'')[0];

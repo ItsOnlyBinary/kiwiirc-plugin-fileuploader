@@ -83,13 +83,16 @@ func (store ShardedFileStore) NewUpload(ctx context.Context, info handler.FileIn
 		return nil, err
 	}
 
+	remoteIP := info.MetaData["RemoteIP"]
+	delete(info.MetaData, "RemoteIP")
+
 	// create record in uploads table
 	if info.MetaData["account"] == "" {
-		err = db.UpdateRow(store.DBConn.DB, `INSERT INTO uploads(id, created_at) VALUES (?, ?)`, id, time.Now().Unix())
+		err = db.UpdateRow(store.DBConn.DB, `INSERT INTO uploads(id, created_at, uploader_ip) VALUES (?, ?, ?)`, id, time.Now().Unix(), remoteIP)
 	} else {
 		err = db.UpdateRow(store.DBConn.DB,
-			`INSERT INTO uploads(id, created_at, jwt_account, jwt_issuer) VALUES (?, ?, ?, ?)`,
-			id, time.Now().Unix(), info.MetaData["account"], info.MetaData["issuer"],
+			`INSERT INTO uploads(id, created_at, uploader_ip, jwt_account, jwt_issuer) VALUES (?, ?, ?, ?, ?)`,
+			id, time.Now().Unix(), remoteIP, info.MetaData["account"], info.MetaData["issuer"],
 		)
 	}
 	if err != nil {
@@ -302,6 +305,7 @@ func (upload *fileUpload) FinishUpload(ctx context.Context) error {
 
 	if err == nil {
 		upload.info.Storage["Path"] = newPath
+		upload.info.MetaData["expires"] = "test"
 		err = upload.writeInfo()
 	}
 

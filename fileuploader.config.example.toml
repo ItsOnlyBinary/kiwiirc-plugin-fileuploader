@@ -53,6 +53,9 @@ CheckInterval = "5m"
 #
 # When using a webircgateway, the issuer will be the network_common_address of the upstream server
 # if set. Otherwise it will be the hostname used to connect to the network.
+#
+# You can set a fallback issuer as "*" which will be attempted if no other matching hosts exist
+# this can be handy if webircgateway is in gateway mode and providing EXTJWT for unknown networks
 [JwtSecretsByIssuer]
 # "example.com" = "examplesecret"
 # "169.254.0.0" = "anothersecret"
