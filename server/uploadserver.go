@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"sync"
 
@@ -58,16 +59,16 @@ func (serv *UploadServer) Run(replaceableHandler *ReplaceableHandler) error {
 	serv.store = shardedfilestore.New(
 		serv.cfg.Storage.Path,
 		serv.cfg.Storage.ShardLayers,
+		serv.cfg.Storage.ExifRemove,
+		serv.cfg.Expiration.MaxAge.Duration,
+		serv.cfg.Expiration.IdentifiedMaxAge.Duration,
 		serv.DBConn,
 		serv.log,
 	)
 
 	serv.expirer = expirer.New(
 		serv.store,
-		serv.cfg.Expiration.MaxAge.Duration,
-		serv.cfg.Expiration.IdentifiedMaxAge.Duration,
 		serv.cfg.Expiration.CheckInterval.Duration,
-		serv.cfg.JwtSecretsByIssuer,
 		serv.log,
 	)
 
@@ -104,7 +105,7 @@ func (serv *UploadServer) Shutdown() {
 
 	// wait for all requests to finish
 	if serv.httpServer != nil {
-		serv.httpServer.Shutdown(nil)
+		serv.httpServer.Shutdown(context.Background())
 	}
 
 	// stop running FileStore GC cycles

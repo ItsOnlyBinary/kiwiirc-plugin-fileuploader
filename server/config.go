@@ -28,10 +28,12 @@ type Config struct {
 		BasePath                  string
 		CorsOrigins               []string
 		TrustedReverseProxyRanges []ipnet
+		RequireJwtAccount         bool
 	}
 	Storage struct {
 		Path              string
 		ShardLayers       int
+		ExifRemove        bool
 		MaximumUploadSize datasize.ByteSize
 	}
 	Database struct {
