@@ -8,11 +8,13 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/c2h5oh/datasize"
 	"github.com/kiwiirc/plugin-fileuploader/logging"
+	"github.com/mattn/go-colorable"
 	"github.com/rs/zerolog"
 )
 
@@ -28,10 +30,12 @@ type Config struct {
 		BasePath                  string
 		CorsOrigins               []string
 		TrustedReverseProxyRanges []ipnet
+		RequireJwtAccount         bool
 	}
 	Storage struct {
 		Path              string
 		ShardLayers       int
+		ExifRemove        bool
 		MaximumUploadSize datasize.ByteSize
 	}
 	Database struct {
@@ -45,6 +49,34 @@ type Config struct {
 	}
 	JwtSecretsByIssuer map[string]string
 	Loggers            []LoggerConfig
+}
+
+type lockingWriter struct {
+	w io.Writer
+	m *sync.Mutex
+}
+
+func newLockingWriter(i io.Writer) io.Writer {
+	writer := lockingWriter{m: &sync.Mutex{}}
+	if i == os.Stdout || i == os.Stderr {
+		writer.w = colorable.NewColorable(i.(*os.File))
+	} else {
+		writer.w = i
+	}
+	return writer
+}
+
+func (e lockingWriter) Write(p []byte) (int, error) {
+	e.m.Lock()
+	defer e.m.Unlock()
+	n, err := e.w.Write(p)
+	if err != nil {
+		return n, err
+	}
+	if n != len(p) {
+		return n, io.ErrShortWrite
+	}
+	return len(p), nil
 }
 
 func NewConfig() *Config {
@@ -104,6 +136,10 @@ func createMultiLogger(loggerConfigs []LoggerConfig) (*zerolog.Logger, error) {
 			output = os.Stderr
 		case "stdout":
 			output = os.Stdout
+		case "locking-stderr":
+			output = newLockingWriter(os.Stderr)
+		case "locking-stdout":
+			output = newLockingWriter(os.Stdout)
 		case "unix":
 			fallthrough
 		case "udp":

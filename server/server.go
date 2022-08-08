@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -142,8 +141,6 @@ func (runCtx *RunContext) runLoop() {
 			select {
 
 			case err := <-errChan:
-
-				fmt.Printf("errChan: %#v\n", err)
 				// quit if unexpected error occurred
 				if err != http.ErrServerClosed {
 					runCtx.log.Fatal().

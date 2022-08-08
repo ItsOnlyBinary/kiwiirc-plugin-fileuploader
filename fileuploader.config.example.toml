@@ -27,6 +27,9 @@ TrustedReverseProxyRanges = [
 	"::1/128",
 ]
 
+# Restrict server to users identified by valid JWT Account
+RequireJwtAccount = false
+
 [Storage]
 Path = "./uploads"
 ShardLayers = 6
@@ -53,6 +56,9 @@ CheckInterval = "5m"
 #
 # When using a webircgateway, the issuer will be the network_common_address of the upstream server
 # if set. Otherwise it will be the hostname used to connect to the network.
+#
+# You can set a fallback issuer as "*" which will be attempted if no other matching hosts exist
+# this can be handy if webircgateway is in gateway mode and providing EXTJWT for unknown networks
 [JwtSecretsByIssuer]
 # "example.com" = "examplesecret"
 # "169.254.0.0" = "anothersecret"
@@ -60,7 +66,7 @@ CheckInterval = "5m"
 [[Loggers]]
 Level = "info" # debug | info | warn | error | fatal | panic
 Format = "pretty" # pretty | json
-Output = "stderr:" # stderr: | stdout: | file:/path | udp:ip:port | unix:/path
+Output = "stderr:" # stderr: | stdout: | file:/path | udp:ip:port | unix:/path | locking-stderr: | locking-stdout:
 
 # [[Loggers]]
 # Level = "debug"
