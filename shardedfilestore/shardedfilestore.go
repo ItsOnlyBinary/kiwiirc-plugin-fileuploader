@@ -4,16 +4,19 @@
 package shardedfilestore
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -22,6 +25,7 @@ import (
 	_ "github.com/go-sql-driver/mysql" // register mysql driver
 	_ "github.com/mattn/go-sqlite3"    // register SQL driver
 
+	"github.com/kiwiirc/plugin-fileuploader/config"
 	"github.com/kiwiirc/plugin-fileuploader/db"
 	"github.com/rs/zerolog"
 	"github.com/tus/tusd/pkg/handler"
@@ -37,6 +41,7 @@ type ShardedFileStore struct {
 	PrefixShardLayers    int           // Number of extra directory layers to prefix file paths with.
 	ExpireTime           time.Duration // How long before an upload expires (seconds)
 	ExpireIdentifiedTime time.Duration // How long before an upload expires with valid account (seconds)
+	PreFinishCommands    map[string][]config.PreFinishCommand
 	DBConn               *db.DatabaseConnection
 	log                  *zerolog.Logger
 }
@@ -45,12 +50,13 @@ type ShardedFileStore struct {
 // be used as the only storage entry. This method does not check
 // whether the path exists, use os.MkdirAll to ensure.
 // In addition, a locking mechanism is provided.
-func New(basePath string, prefixShardLayers int, exifRemove bool, expireTime, expireIdentifiedTime time.Duration, dbConnection *db.DatabaseConnection, log *zerolog.Logger) *ShardedFileStore {
+func New(basePath string, prefixShardLayers int, expireTime, expireIdentifiedTime time.Duration, PreFinishCommands map[string][]config.PreFinishCommand, dbConnection *db.DatabaseConnection, log *zerolog.Logger) *ShardedFileStore {
 	store := &ShardedFileStore{
 		BasePath:             basePath,
 		PrefixShardLayers:    prefixShardLayers,
 		ExpireTime:           expireTime,
 		ExpireIdentifiedTime: expireIdentifiedTime,
+		PreFinishCommands:    PreFinishCommands,
 		DBConn:               dbConnection,
 		log:                  log,
 	}
@@ -276,9 +282,17 @@ func (upload *fileUpload) FinishUpload(ctx context.Context) error {
 
 	oldPath := upload.store.incompleteBinPath(upload.info.ID)
 
+	if ok := upload.ExecuteCommands(oldPath); !ok {
+		upload.store.Terminate(upload.info.ID)
+		return handler.NewHTTPError(errors.New("Upload has been reject by server"), 406)
+	}
+
 	// calculate hash
 	hash, err := upload.store.hashFile(upload.info.ID)
 	if err != nil {
+		upload.store.log.Error().
+			Err(err).
+			Msg("Failed to hash completed upload")
 		return err
 	}
 
@@ -345,6 +359,54 @@ func Uid() string {
 		panic(err)
 	}
 	return hex.EncodeToString(id)
+}
+
+func (upload *fileUpload) ExecuteCommands(path string) bool {
+	var (
+		ok       bool
+		fileType string
+		commands []config.PreFinishCommand
+	)
+	// execute completion commands
+	if fileType, ok = upload.info.MetaData["filetype"]; !ok {
+		return true
+	}
+
+	if commands, ok = upload.store.PreFinishCommands[fileType]; !ok {
+		return true
+	}
+
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		upload.store.log.Error().
+			Err(err).
+			Msg("Failed resolve path in ExecuteCommands")
+		return false
+	}
+
+	for _, command := range commands {
+		args := make([]string, 0)
+		for _, arg := range command.Args {
+			arg = strings.ReplaceAll(arg, "%FILE%", absPath)
+			args = append(args, arg)
+		}
+
+		cmd := exec.Command(command.Command, args...)
+		var out bytes.Buffer
+		cmd.Stderr = &out
+		if err := cmd.Run(); err != nil && command.RejectOnNoneZeroExit {
+			upload.store.log.Warn().
+				Err(err).
+				Strs("args", args).
+				Str("command", command.Command).
+				Str("Stderr", out.String()).
+				Msg("Error with pre-finish command")
+
+			return false
+		}
+	}
+
+	return true
 }
 
 func (store *ShardedFileStore) Terminate(id string) error {

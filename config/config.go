@@ -1,4 +1,4 @@
-package server
+package config
 
 import (
 	"errors"
@@ -24,6 +24,12 @@ type LoggerConfig struct {
 	Output logOutput
 }
 
+type PreFinishCommand struct {
+	Command              string
+	Args                 []string
+	RejectOnNoneZeroExit bool
+}
+
 type Config struct {
 	Server struct {
 		ListenAddress             string
@@ -47,6 +53,7 @@ type Config struct {
 		IdentifiedMaxAge duration
 		CheckInterval    duration
 	}
+	PreFinishCommands  map[string][]PreFinishCommand
 	JwtSecretsByIssuer map[string]string
 	Loggers            []LoggerConfig
 }
@@ -120,7 +127,7 @@ func (cfg *Config) DoPostLoadLogging(log *zerolog.Logger, configPath string, md 
 	}
 }
 
-func createMultiLogger(loggerConfigs []LoggerConfig) (*zerolog.Logger, error) {
+func CreateMultiLogger(loggerConfigs []LoggerConfig) (*zerolog.Logger, error) {
 	var writers []io.Writer
 	for _, loggerCfg := range loggerConfigs {
 		var output io.Writer

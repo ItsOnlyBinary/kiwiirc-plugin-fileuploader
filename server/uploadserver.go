@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kiwiirc/plugin-fileuploader/config"
 	"github.com/kiwiirc/plugin-fileuploader/db"
 	"github.com/kiwiirc/plugin-fileuploader/events"
 	"github.com/kiwiirc/plugin-fileuploader/expirer"
@@ -20,7 +21,7 @@ type UploadServer struct {
 	DBConn *db.DatabaseConnection
 	Router *gin.Engine
 
-	cfg                 Config
+	cfg                 config.Config
 	log                 *zerolog.Logger
 	store               *shardedfilestore.ShardedFileStore
 	expirer             *expirer.Expirer
@@ -59,9 +60,9 @@ func (serv *UploadServer) Run(replaceableHandler *ReplaceableHandler) error {
 	serv.store = shardedfilestore.New(
 		serv.cfg.Storage.Path,
 		serv.cfg.Storage.ShardLayers,
-		serv.cfg.Storage.ExifRemove,
 		serv.cfg.Expiration.MaxAge.Duration,
 		serv.cfg.Expiration.IdentifiedMaxAge.Duration,
+		serv.cfg.PreFinishCommands,
 		serv.DBConn,
 		serv.log,
 	)
