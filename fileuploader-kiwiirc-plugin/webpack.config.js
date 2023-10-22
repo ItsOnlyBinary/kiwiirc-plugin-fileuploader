@@ -15,6 +15,9 @@ module.exports = {
         filename: 'plugin-fileuploader.js',
         path: path.resolve(__dirname, 'dist'),
     },
+    externals: {
+        vue: 'kiwi.Vue',
+    },
     resolve: {
         alias: {
             '@': path.resolve(__dirname, 'src'),

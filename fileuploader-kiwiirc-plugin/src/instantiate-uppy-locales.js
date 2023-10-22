@@ -66,7 +66,9 @@ export default function instantiateUppyLocales(kiwiApi, uppy) {
     }
 
     loadLocale();
-    kiwiApi.state.$watch('user_settings.language', (lang) => {
-        loadLocale(lang);
-    });
+
+    kiwiApi.Vue.watch(
+        kiwiApi.state.settingComputed('language'),
+        (lang) => loadLocale(lang),
+    );
 };
