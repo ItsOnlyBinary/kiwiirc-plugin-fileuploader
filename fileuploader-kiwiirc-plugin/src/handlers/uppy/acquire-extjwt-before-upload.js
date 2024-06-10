@@ -6,7 +6,7 @@ const log = Logger.namespace('plugin-fileuploader');
 
 export default function acquireExtjwtBeforeUpload(uppy, tokenManager) {
     function handleBeforeUpload(fileIDs) {
-        const awaitingPromises = new Set();
+        const awaitingPromises = [];
 
         const files = fileIDs.map((id) => uppy.getFile(id));
 
@@ -19,16 +19,22 @@ export default function acquireExtjwtBeforeUpload(uppy, tokenManager) {
 
             const maybeToken = tokenManager.get(network);
             if (maybeToken instanceof Promise) {
-                awaitingPromises.add(maybeToken);
-            } else {
-                fileObj.meta.extjwt = maybeToken;
+                awaitingPromises.push(maybeToken);
             }
+
+            fileObj.meta.extjwt = maybeToken;
         });
 
-        if (awaitingPromises.size) {
+        if (awaitingPromises.length) {
             // Wait for the unresolved promises then resume uploading
-            return Promise.all(awaitingPromises.values()).then(() => {
+            return Promise.all(awaitingPromises).then(async () => {
                 log.debug('Token acquisition complete. Restarting upload.');
+
+                for (let i = 0; i < files.length; i++) {
+                    const fileObj = files[i];
+                    // eslint-disable-next-line no-await-in-loop
+                    fileObj.meta.extjwt = await fileObj.meta.extjwt;
+                }
             });
         }
 
