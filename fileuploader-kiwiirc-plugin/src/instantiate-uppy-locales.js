@@ -14,17 +14,13 @@ export default function instantiateUppyLocales(kiwiApi, uppy) {
         }
 
         const langUppy = lang.join('_').toLowerCase();
-        const localePathConfig = config.getSetting('localePath');
-        const localePathAuto = config.getBasePath() + 'plugin-fileuploader/locales/uppy/%LANG%.json';
-        const localePath = localePathConfig || localePathAuto;
+        const localePath = config.getSetting('localePath');
         const localeURL = localePath.replace('%LANG%', langUppy);
 
         fetch(localeURL)
             .then((r) => {
-                if (r.status !== 200) {
-                    console.error('failed to load uppy locale, path:', localeURL);
-                    setDefaultLocale();
-                    return;
+                if (!r.ok) {
+                    throw new Error('failed to load uppy locale, path:', localeURL);
                 }
                 return r.json();
             })
@@ -69,4 +65,4 @@ export default function instantiateUppyLocales(kiwiApi, uppy) {
     kiwiApi.state.$watch('user_settings.language', (lang) => {
         loadLocale(lang);
     });
-};
+}

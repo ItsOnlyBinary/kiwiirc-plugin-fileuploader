@@ -1,5 +1,4 @@
 /* global kiwi:true */
-/* global _:true */
 
 import Bytes from 'bytes';
 
@@ -10,9 +9,10 @@ const defaultConfig = {
     maxFileSize: Bytes.parse('10MB'),
     uploadMessage: 'Uploaded file: %URL%',
     note: '',
-    localePath: '',
+    localePath: getBasePath() + 'plugin-fileuploader/locales/uppy/%LANG%.json',
     textPastePromptMinimumLines: 5,
     textPasteNeverPrompt: false,
+    userAccountsOnly: false,
     bufferInfoUploads: true,
     allowedFileTypes: null,
     maxFileSizeTypes: null,
@@ -24,6 +24,7 @@ const defaultConfig = {
 export function setDefaults() {
     const oldConfig = kiwi.state.getSetting('settings.fileuploader');
     if (oldConfig) {
+        // eslint-disable-next-line no-console, vue/max-len
         console.warn('[DEPRECATION] Please update your fileuploader config to use "plugin-fileuploader" as its object key');
         kiwi.setConfigDefaults(configBase, oldConfig);
     }
@@ -31,20 +32,20 @@ export function setDefaults() {
     kiwi.setConfigDefaults(configBase, defaultConfig);
 }
 
-export function setting(name) {
-    return kiwi.state.setting(_.compact([configBase, name]).join('.'));
+export function setting(name, value) {
+    return kiwi.state.setting([configBase, name].join('.'), value);
 }
 
 export function getSetting(name) {
-    return kiwi.state.getSetting(_.compact(['settings', configBase, name]).join('.'));
+    return kiwi.state.getSetting(['settings', configBase, name].join('.'));
 }
 
 export function setSetting(name, value) {
-    return kiwi.state.setSetting(_.compact(['settings', configBase, name]).join('.'), value);
+    return kiwi.state.setSetting(['settings', configBase, name].join('.'), value);
 }
 
-export function getBasePath() {
+function getBasePath() {
     const scripts = document.getElementsByTagName('script');
     const scriptPath = scripts[scripts.length - 1].src;
-    return scriptPath.substring(0, scriptPath.lastIndexOf('/') + 1);
+    return scriptPath.substr(0, scriptPath.lastIndexOf('/') + 1);
 }

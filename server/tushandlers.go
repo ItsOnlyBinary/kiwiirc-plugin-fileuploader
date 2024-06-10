@@ -17,7 +17,7 @@ import (
 	"github.com/kiwiirc/plugin-fileuploader/events"
 	"github.com/kiwiirc/plugin-fileuploader/logging"
 	"github.com/kiwiirc/plugin-fileuploader/shardedfilestore"
-	tusd "github.com/tus/tusd/pkg/handler"
+	"github.com/tus/tusd/pkg/handler"
 )
 
 func customizedCors(serv *UploadServer) gin.HandlerFunc {
@@ -63,7 +63,7 @@ func (serv *UploadServer) fileuploaderMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		metadata := tusd.ParseMetadataHeader(c.Request.Header.Get("Upload-Metadata"))
+		metadata := handler.ParseMetadataHeader(c.Request.Header.Get("Upload-Metadata"))
 
 		// ensure the user does not try to provide their own RemoteIP
 		delete(metadata, "RemoteIP")
@@ -97,7 +97,7 @@ func (serv *UploadServer) fileuploaderMiddleware() gin.HandlerFunc {
 		delete(metadata, "extjwt")
 
 		// Update metadata with any changes that have been made
-		c.Request.Header.Set("Upload-Metadata", tusd.SerializeMetadataHeader(metadata))
+		c.Request.Header.Set("Upload-Metadata", handler.SerializeMetadataHeader(metadata))
 
 		// store metadata in gin context so it does not need to be parsed again
 		c.Set("metadata", metadata)
@@ -108,7 +108,7 @@ func (serv *UploadServer) registerTusHandlers(r *gin.Engine, store *shardedfiles
 	maximumUploadSize := serv.cfg.Storage.MaximumUploadSize
 	serv.log.Debug().Str("size", maximumUploadSize.String()).Msg("Using upload limit")
 
-	config := tusd.Config{
+	config := handler.Config{
 		BasePath:                serv.cfg.Server.BasePath,
 		StoreComposer:           serv.composer,
 		MaxSize:                 int64(maximumUploadSize.Bytes()),
@@ -124,7 +124,7 @@ func (serv *UploadServer) registerTusHandlers(r *gin.Engine, store *shardedfiles
 		return err
 	}
 
-	handler, err := tusd.NewUnroutedHandler(config)
+	handler, err := handler.NewUnroutedHandler(config)
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func (serv *UploadServer) registerTusHandlers(r *gin.Engine, store *shardedfiles
 	return nil
 }
 
-func (serv *UploadServer) postFile(handler *tusd.UnroutedHandler) gin.HandlerFunc {
+func (serv *UploadServer) postFile(handler *handler.UnroutedHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		metadata := c.MustGet("metadata").(map[string]string)
 
@@ -185,7 +185,7 @@ func (serv *UploadServer) postFile(handler *tusd.UnroutedHandler) gin.HandlerFun
 	}
 }
 
-func (serv *UploadServer) delFile(handler *tusd.UnroutedHandler) gin.HandlerFunc {
+func (serv *UploadServer) delFile(handler *handler.UnroutedHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		metadata := c.MustGet("metadata").(map[string]string)

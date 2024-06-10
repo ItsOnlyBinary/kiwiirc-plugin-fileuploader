@@ -36,7 +36,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/kiwiirc/plugin-fileuploader/shardedfilestore"
 	"github.com/tus/tusd/pkg/handler"
-	tusd "github.com/tus/tusd/pkg/handler"
 )
 
 var (
@@ -50,7 +49,7 @@ var (
 // GetFile handles requests to download a file using a GET request. This is not
 // part of the specification.
 // func (handler *UnroutedHandler) GetFile(w http.ResponseWriter, r *http.Request) {
-func (serv *UploadServer) getFile(handler *tusd.UnroutedHandler, store *shardedfilestore.ShardedFileStore) gin.HandlerFunc {
+func (serv *UploadServer) getFile(handler *handler.UnroutedHandler, store *shardedfilestore.ShardedFileStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := context.Background()
 		r := c.Request

@@ -36,7 +36,7 @@ import (
 var defaultFilePerm = os.FileMode(0664)
 var defaultDirectoryPerm = os.FileMode(0775)
 
-// ShardedFileStore implements various tusd.DataStore-related interfaces.
+// ShardedFileStore implements various handler.DataStore-related interfaces.
 // See the interfaces for more documentation about the different methods.
 type ShardedFileStore struct {
 	BasePath             string        // Relative or absolute path to store files in.

@@ -1,7 +1,7 @@
 <template>
-    <div class="kiwiirc-fileuploader-body">
+    <div class="p-fileuploader-body">
         <div class="kiwi-messagelist-body" v-html="ml.formatMessage(message)" />
-        <div v-if="shouldShow" class="kiwiirc-fileuploader-audio">
+        <div v-if="shouldShow" class="p-fileuploader-audio">
             <audio
                 :src="message.mentioned_urls[0]"
                 preload="metadata"

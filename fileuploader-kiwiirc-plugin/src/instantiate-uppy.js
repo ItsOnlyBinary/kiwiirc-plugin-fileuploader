@@ -9,20 +9,18 @@ import prettierBytes from '@transloadit/prettier-bytes';
 import Bytes from 'bytes';
 import Wildcard from 'wildcard';
 
-import acquireExtjwtBeforeUpload from './handlers/uppy/acquire-extjwt-before-upload';
-
 import * as config from '@/config.js';
+
+import acquireExtjwtBeforeUpload from './handlers/uppy/acquire-extjwt-before-upload';
 
 export default function instantiateUppy({
     kiwiApi,
     tokenManager,
-    uploadFileButton,
     dashboardOptions,
     tusOptions,
     uppyOptions,
 }) {
     const effectiveDashboardOpts = {
-        trigger: uploadFileButton,
         proudlyDisplayPoweredByUppy: false,
         closeModalOnClickOutside: true,
         note: config.getSetting('note'),

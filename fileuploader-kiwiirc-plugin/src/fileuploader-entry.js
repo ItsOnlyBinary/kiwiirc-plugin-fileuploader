@@ -3,29 +3,24 @@ import '@uppy/dashboard/dist/style.css';
 import '@uppy/webcam/dist/style.css';
 import '@uppy/audio/dist/style.css';
 import '@uppy/image-editor/dist/style.css';
+
+import * as config from '@/config.js';
+
+import UploadButton from './components/UploadButton.vue';
 import sidebarFileList from './components/SidebarFileList.vue';
 import audioPlayerComponent from './components/AudioPlayer.vue';
 import { showDashboardOnDragEnter } from './handlers/show-dashboard-on-drag-enter';
 import { uploadOnPaste } from './handlers/upload-on-paste';
 import { closeModalWhenUploadsCompleted } from './handlers/uppy/close-modal-when-uploads-completed';
 import { shareCompletedUploadUrl } from './handlers/uppy/share-completed-upload-url';
-// import { trackFileUploadTarget } from './handlers/uppy/track-file-upload-target';
 import instantiateUppy from './instantiate-uppy';
 import instantiateUppyLocales from './instantiate-uppy-locales';
-import { createPromptUpload } from './prompt-upload';
 import TokenManager from './token-manager';
 
-import * as config from '@/config.js';
-
 /* global kiwi:true */
-kiwi.plugin('fileuploader', function(kiwiApi, log) {
+kiwi.plugin('fileuploader', (kiwiApi, log) => {
     // default settings
     config.setDefaults();
-
-    // add button to input bar
-    const uploadFileButton = document.createElement('i');
-    uploadFileButton.className = 'upload-file-button fa fa-upload';
-    kiwiApi.addUi('input', uploadFileButton);
 
     // add sidebar panel
     if (config.getSetting('bufferInfoUploads')) {
@@ -37,7 +32,6 @@ kiwi.plugin('fileuploader', function(kiwiApi, log) {
     const { uppy, dashboard } = instantiateUppy({
         kiwiApi,
         tokenManager,
-        uploadFileButton,
         dashboardOptions: config.getSetting('dashboardOptions'),
         tusOptions: config.getSetting('tusOptions'),
         uppyOptions: config.getSetting('uppyOptions'),
@@ -45,9 +39,11 @@ kiwi.plugin('fileuploader', function(kiwiApi, log) {
 
     instantiateUppyLocales(kiwiApi, uppy);
 
-    const promptUpload = createPromptUpload({ kiwiApi, tokenManager });
+    // add button to input bar
+    kiwiApi.addUi('input', UploadButton, { props: { uppyDashboard: dashboard } });
+
     // expose plugin api
-    kiwiApi.fileuploader = { uppy, dashboard, promptUpload };
+    kiwiApi.fileuploader = { uppy, dashboard };
 
     // show uppy modal whenever a file is dragged over the page
     window.addEventListener('dragenter', showDashboardOnDragEnter(kiwiApi, dashboard));
