@@ -102,7 +102,7 @@ func (store ShardedFileStore) NewUpload(ctx context.Context, info handler.FileIn
 	delete(info.MetaData, "RemoteIP")
 
 	// create record in uploads table
-	err = db.UpdateRow(store.DBConn.DB,
+	err = db.UpdateRow(store.DBConn,
 		`INSERT INTO uploads(id, created_at, uploader_ip, jwt_account, jwt_issuer) VALUES (?, ?, ?, ?, ?)`,
 		info.ID, time.Now().Unix(), remoteIP, info.MetaData["account"], info.MetaData["issuer"],
 	)
@@ -355,7 +355,7 @@ func (upload *FileUpload) FinishUpload(ctx context.Context) error {
 	upload.info.MetaData["expires"] = strconv.FormatInt(expires, 10)
 
 	// update hash in uploads table
-	err = db.UpdateRow(upload.store.DBConn.DB, `
+	err = db.UpdateRow(upload.store.DBConn, `
 		UPDATE uploads
 		SET sha256sum = ?,
 		expires_at = ?
@@ -438,7 +438,7 @@ func (store *ShardedFileStore) Terminate(id string) error {
 	}
 
 	// mark upload db record as deleted
-	err = db.UpdateRow(store.DBConn.DB, `
+	err = db.UpdateRow(store.DBConn, `
 		UPDATE uploads
 		SET deleted = 1
 		WHERE id = ?
@@ -487,7 +487,7 @@ func (store *ShardedFileStore) getDuplicateCount(id string) (duplicates int, err
 	}
 
 	// check if there are any other uploads pointing to this file
-	err = store.DBConn.DB.QueryRow(`
+	err = db.QueryRow(store.DBConn, `
 		SELECT count(id)
 		FROM uploads
 		WHERE
@@ -551,8 +551,7 @@ func RemoveWithDirs(path string, basePath string) (err error) {
 // lookupHash translates a randomly generated upload id into its cryptographic
 // hash by querying the upload database.
 func (store *ShardedFileStore) lookupHash(id string) (hash []byte, isFinal bool, err error) {
-	row := store.DBConn.DB.QueryRow(`SELECT sha256sum FROM uploads WHERE id = ?`, id)
-	err = row.Scan(&hash)
+	err = db.QueryRow(store.DBConn, `SELECT sha256sum FROM uploads WHERE id = ?`, id).Scan(&hash)
 
 	// no finalized upload exists
 	if err == sql.ErrNoRows {

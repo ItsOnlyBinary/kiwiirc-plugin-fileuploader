@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/kiwiirc/plugin-fileuploader/db"
 	"github.com/kiwiirc/plugin-fileuploader/events"
 	"github.com/kiwiirc/plugin-fileuploader/logging"
 	"github.com/kiwiirc/plugin-fileuploader/shardedfilestore"
@@ -191,8 +192,7 @@ func (serv *UploadServer) delFile(handler *handler.UnroutedHandler) gin.HandlerF
 		metadata := c.MustGet("metadata").(map[string]string)
 
 		var uploaderIP, jwtAccount, jwtIssuer string
-		row := serv.DBConn.DB.QueryRow(`SELECT uploader_ip, jwt_account, jwt_issuer FROM uploads WHERE id = ?`, id)
-		err := row.Scan(&uploaderIP, &jwtAccount, &jwtIssuer)
+		err := db.QueryRow(serv.DBConn, `SELECT uploader_ip, jwt_account, jwt_issuer FROM uploads WHERE id = ?`, id).Scan(&uploaderIP, &jwtAccount, &jwtIssuer)
 
 		// no finalized upload exists
 		if err == sql.ErrNoRows {
