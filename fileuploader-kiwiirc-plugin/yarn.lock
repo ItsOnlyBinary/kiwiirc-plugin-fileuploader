@@ -1551,10 +1551,10 @@
     "@uppy/utils" "^6.0.4"
     preact "^10.5.13"
 
-"@uppy/locales@^4.2.1":
-  version "4.2.1"
-  resolved "https://registry.yarnpkg.com/@uppy/locales/-/locales-4.2.1.tgz#0d2926c941b1586e2bfa3d34251a63262ce3a5f4"
-  integrity sha512-Pj2b7RBqLKt/EmdvwwxZzclwXv5fRcsBS5bhR8qqC39s+Cw0qZkTxxdnD9tBR3GOBRbZLuw0n8LGHkvhJ2jbFQ==
+"@uppy/locales@^4.3.0":
+  version "4.3.0"
+  resolved "https://registry.yarnpkg.com/@uppy/locales/-/locales-4.3.0.tgz#d37295cb8a4342c614458750f884f6c8602fb8bb"
+  integrity sha512-pQB6UlwpQZ+m6jmDFFCeF5pUjwnaSUGeeQbaII1xl7KvpKXsKHDVe+bKcDAFO1GfQlEndBG6EwrsBtQGxbF+Uw==
   dependencies:
     "@uppy/utils" "^6.0.4"
 
@@ -1592,10 +1592,10 @@
     "@uppy/utils" "^6.0.4"
     exifr "^7.0.0"
 
-"@uppy/tus@^4.1.3":
-  version "4.1.3"
-  resolved "https://registry.yarnpkg.com/@uppy/tus/-/tus-4.1.3.tgz#30ac49d699c118bfeedfc9beca3a8f1ca63015b9"
-  integrity sha512-oX6Krds1iygLsTbYnvkP7pnGZa2UeiHq0RRxm40IDtVcfeHnNS3lD84VDTYfwxdWzdvfezCHnWBkgNXC+mjWNw==
+"@uppy/tus@^4.1.4":
+  version "4.1.4"
+  resolved "https://registry.yarnpkg.com/@uppy/tus/-/tus-4.1.4.tgz#d824b58973fd860e5a18b9e2d66826eb043c5474"
+  integrity sha512-QnJI66ws6xJEt/qnThgy9Lmg18JxEm3nmTKw8KxF4MTVQG5SmTMWb+qC22uOTiBU82bsdwORQWtd7huCVOcs3Q==
   dependencies:
     "@uppy/companion-client" "^4.1.1"
     "@uppy/utils" "^6.0.4"
@@ -6317,7 +6317,7 @@ picocolors@^1.0.0, picocolors@^1.0.1:
   resolved "https://registry.yarnpkg.com/picocolors/-/picocolors-1.0.1.tgz#a8ad579b571952f0e5d25892de5445bcfe25aaa1"
   integrity sha512-anP1Z8qwhkbmu7MFP5iTt+wQKXgwzf7zTyGlcdzabySa9vd0Xt392U0rVmz9poOaBj0uHJKyyo9/upk0HrEQew==
 
-picocolors@^1.1.0:
+picocolors@^1.1.0, picocolors@^1.1.1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/picocolors/-/picocolors-1.1.1.tgz#3d321af3eab939b083c8f929a1d12cda81c26b6b"
   integrity sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==
@@ -6673,13 +6673,13 @@ postcss@^8.4.0, postcss@^8.4.24, postcss@^8.4.28, postcss@^8.4.32, postcss@^8.4.
     picocolors "^1.0.0"
     source-map-js "^1.2.0"
 
-postcss@^8.4.47:
-  version "8.4.47"
-  resolved "https://registry.yarnpkg.com/postcss/-/postcss-8.4.47.tgz#5bf6c9a010f3e724c503bf03ef7947dcb0fea365"
-  integrity sha512-56rxCq7G/XfB4EkXq9Egn5GCqugWvDFjafDOThIdMBsI15iqPqR5r15TfSr1YPYeEI19YeaXMCbY6u88Y76GLQ==
+postcss@^8.4.48:
+  version "8.4.48"
+  resolved "https://registry.yarnpkg.com/postcss/-/postcss-8.4.48.tgz#765f3f8abaa2a2b065cdddbc57ad4cb5a76e515f"
+  integrity sha512-GCRK8F6+Dl7xYniR5a4FYbpBzU8XnZVeowqsQFYdcXuSbChgiks7qybSkbvnaeqv0G0B+dd9/jJgH8kkLDQeEA==
   dependencies:
     nanoid "^3.3.7"
-    picocolors "^1.1.0"
+    picocolors "^1.1.1"
     source-map-js "^1.2.1"
 
 preact@^10.5.13:

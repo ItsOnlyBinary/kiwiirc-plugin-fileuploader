@@ -103,8 +103,8 @@ func (store ShardedFileStore) NewUpload(ctx context.Context, info handler.FileIn
 
 	// create record in uploads table
 	err = db.UpdateRow(store.DBConn,
-		`INSERT INTO uploads(id, created_at, uploader_ip, jwt_account, jwt_issuer) VALUES (?, ?, ?, ?, ?)`,
-		info.ID, time.Now().Unix(), remoteIP, info.MetaData["account"], info.MetaData["issuer"],
+		`INSERT INTO uploads(id, created_at, uploader_ip, file_name, file_type, jwt_nick, jwt_account, jwt_issuer) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		info.ID, time.Now().Unix(), remoteIP, info.MetaData["filename"], info.MetaData["filetype"], info.MetaData["nick"], info.MetaData["account"], info.MetaData["issuer"],
 	)
 	if err != nil {
 		return nil, err
@@ -240,10 +240,6 @@ func (upload *FileUpload) GetReader(ctx context.Context) (io.Reader, error) {
 	return os.Open(upload.binPath)
 }
 
-func (upload *FileUpload) GetFile(ctx context.Context) (*os.File, error) {
-	return os.Open(upload.binPath)
-}
-
 func (upload *FileUpload) Terminate(ctx context.Context) error {
 	return upload.store.Terminate(upload.info.ID)
 }
@@ -318,6 +314,12 @@ func (upload *FileUpload) FinishUpload(ctx context.Context) error {
 			args = append(args, arg)
 		}
 
+		upload.store.log.Debug().
+			Err(err).
+			Strs("args", args).
+			Str("command", preFinish.Command).
+			Msg("Running pre-finish command")
+
 		cmd := exec.Command(preFinish.Command, args...)
 		var stdOut, stdErr bytes.Buffer
 		cmd.Stdout = &stdOut
@@ -348,6 +350,18 @@ func (upload *FileUpload) FinishUpload(ctx context.Context) error {
 		return err
 	}
 
+	// update file size
+	stat, err := os.Stat(absPath)
+	if err != nil {
+		upload.store.log.Error().
+			Err(err).
+			Msg("Failed to stat completed upload")
+		return err
+	}
+	size := stat.Size()
+	upload.info.Offset = size
+	upload.info.Size = size
+
 	expires := durationToExpire(upload.store.ExpireTime)
 	if upload.info.MetaData["account"] != "" {
 		expires = durationToExpire(upload.store.ExpireIdentifiedTime)
@@ -358,9 +372,10 @@ func (upload *FileUpload) FinishUpload(ctx context.Context) error {
 	err = db.UpdateRow(upload.store.DBConn, `
 		UPDATE uploads
 		SET sha256sum = ?,
-		expires_at = ?
+		expires_at = ?,
+		file_size = ?
 		WHERE id = ?
-	`, hash, expires, upload.info.ID)
+	`, hash, expires, size, upload.info.ID)
 	if err != nil {
 		upload.store.log.Error().
 			Err(err).
@@ -383,7 +398,7 @@ func (upload *FileUpload) FinishUpload(ctx context.Context) error {
 				Msg("Failed to rename")
 		}
 	} else {
-		// file already exists just remove the tempoary upload
+		// file already exists just remove the temporary upload
 		err = os.Remove(oldPath)
 		if err != nil {
 			upload.store.log.Error().

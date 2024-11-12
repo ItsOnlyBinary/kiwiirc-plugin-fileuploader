@@ -96,13 +96,11 @@ func (serv *UploadServer) getFile(handler *handler.UnroutedHandler, store *shard
 			return
 		}
 
-		file, err := upload.GetFile(ctx)
+		fileReader, err := upload.GetReader(ctx)
 		if err != nil {
 			serv.sendError(w, r, err)
 			return
 		}
-
-		var fileReader io.Reader
 
 		// Check if the request contains a range header
 		rangeHeader := r.Header.Get("Range")
@@ -141,14 +139,16 @@ func (serv *UploadServer) getFile(handler *handler.UnroutedHandler, store *shard
 			w.WriteHeader(http.StatusPartialContent)
 
 			if rangeStart > 0 {
-				_, err = file.Seek(rangeStart-1, io.SeekStart)
-				if err != nil {
-					serv.sendError(w, r, err)
-					return
+				if seeker, ok := fileReader.(io.Seeker); ok {
+					_, err = seeker.Seek(rangeStart-1, io.SeekStart)
+					if err != nil {
+						serv.sendError(w, r, err)
+						return
+					}
+				} else {
+					serv.sendError(w, r, errors.New("reader does not support seeking"))
 				}
 			}
-
-			fileReader = io.Reader(file)
 
 			// Copy the range to the response writer
 			io.CopyN(w, fileReader, rangeSize)
@@ -160,8 +160,6 @@ func (serv *UploadServer) getFile(handler *handler.UnroutedHandler, store *shard
 
 			// Send "200 OK" status indicating a successful full file response
 			w.WriteHeader(http.StatusOK)
-
-			fileReader = io.Reader(file)
 
 			// Copy the entire file to the response writer
 			io.Copy(w, fileReader)

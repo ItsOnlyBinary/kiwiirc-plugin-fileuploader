@@ -256,6 +256,7 @@ func (serv *UploadServer) getSecretForToken(token *jwt.Token) (interface{}, erro
 
 func (serv *UploadServer) processJwt(metadata map[string]string) (err error) {
 	// ensure the client doesn't attempt to specify their own account/issuer fields
+	delete(metadata, "nick")
 	delete(metadata, "issuer")
 	delete(metadata, "account")
 
@@ -278,6 +279,9 @@ func (serv *UploadServer) processJwt(metadata map[string]string) (err error) {
 		return fmt.Errorf("no jwt claims")
 	}
 
+	if nick, ok := claims["sub"].(string); ok {
+		metadata["nick"] = nick
+	}
 	if issuer, ok := claims["iss"].(string); ok {
 		metadata["issuer"] = issuer
 	}
