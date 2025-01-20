@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"net/http"
+	"path/filepath"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -13,7 +14,8 @@ import (
 	"github.com/kiwiirc/plugin-fileuploader/logging"
 	"github.com/kiwiirc/plugin-fileuploader/shardedfilestore"
 	"github.com/rs/zerolog"
-	"github.com/tus/tusd/pkg/handler"
+	"github.com/tus/tusd/v2/pkg/handler"
+	"github.com/tus/tusd/v2/pkg/memorylocker"
 )
 
 // UploadServer is a simple configurable service for file sharing.
@@ -22,10 +24,11 @@ type UploadServer struct {
 	DBConn *db.DatabaseConnection
 	Router *gin.Engine
 
-	cfg                 config.Config
+	cfg                 *config.Config
 	log                 *zerolog.Logger
 	composer            *handler.StoreComposer
 	store               *shardedfilestore.ShardedFileStore
+	locker              *memorylocker.MemoryLocker
 	expirer             *expirer.Expirer
 	httpServer          *http.Server
 	startedMu           sync.Mutex
@@ -54,11 +57,9 @@ func (serv *UploadServer) Run(replaceableHandler *ReplaceableHandler) error {
 	serv.Router = gin.New()
 	serv.Router.Use(logging.GinLogger(serv.log), gin.Recovery())
 
-	serv.DBConn = db.ConnectToDB(serv.log, db.DBConfig{
-		DriverName: serv.cfg.Database.Type,
-		DSN:        serv.cfg.Database.Path,
-	})
+	serv.DBConn = db.ConnectToDB(serv.log, serv.cfg)
 
+	serv.locker = memorylocker.New()
 	serv.store = shardedfilestore.New(
 		serv.cfg.Storage.Path,
 		serv.cfg.Storage.ShardLayers,
@@ -71,17 +72,21 @@ func (serv *UploadServer) Run(replaceableHandler *ReplaceableHandler) error {
 
 	serv.composer = handler.NewStoreComposer()
 	serv.store.UseIn(serv.composer)
+	serv.locker.UseIn(serv.composer)
 
-	serv.expirer = expirer.New(
-		serv.store,
-		serv.cfg.Expiration.CheckInterval.Duration,
-		serv.log,
-	)
-
-	err := serv.registerTusHandlers(serv.Router, serv.store)
+	handler, err := serv.registerTusHandlers(serv.Router, serv.store)
 	if err != nil {
 		return err
 	}
+
+	// Start upload expirer
+	serv.expirer = expirer.New(
+		serv.composer,
+		handler,
+		serv.DBConn,
+		serv.cfg.Expiration.CheckInterval.Duration,
+		serv.log,
+	)
 
 	// closed channel indicates that startup is complete
 	close(serv.GetStartedChan())
@@ -101,6 +106,11 @@ func (serv *UploadServer) Run(replaceableHandler *ReplaceableHandler) error {
 	return serv.httpServer.ListenAndServe()
 }
 
+func (serv *UploadServer) getPath(elem ...string) string {
+	pathParts := append([]string{serv.cfg.Storage.Path}, elem...)
+	return filepath.Join(pathParts...)
+}
+
 // Shutdown gracefully terminates the UploadServer instance.
 // The HTTP listen socket will close immediately, causing the .Run() call to return.
 // The call to .Shutdown() will block until all outstanding requests have been served and
@@ -115,7 +125,7 @@ func (serv *UploadServer) Shutdown() {
 	}
 
 	// stop running FileStore GC cycles
-	serv.expirer.Stop()
+	// serv.expirer.Stop()
 
 	// close db connections
 	serv.DBConn.DB.Close()

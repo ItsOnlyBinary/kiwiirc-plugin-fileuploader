@@ -1,25 +1,32 @@
 package expirer
 
 import (
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"time"
 
 	"github.com/kiwiirc/plugin-fileuploader/db"
-	"github.com/kiwiirc/plugin-fileuploader/shardedfilestore"
 	"github.com/rs/zerolog"
+	tusd "github.com/tus/tusd/v2/pkg/handler"
 )
 
 type Expirer struct {
 	ticker   *time.Ticker
-	store    *shardedfilestore.ShardedFileStore
 	quitChan chan struct{} // closes when ticker has been stopped
+	composer *tusd.StoreComposer
+	handler  *tusd.UnroutedHandler
+	dbConn   *db.DatabaseConnection
 	log      *zerolog.Logger
 }
 
-func New(store *shardedfilestore.ShardedFileStore, checkInterval time.Duration, log *zerolog.Logger) *Expirer {
+func New(composer *tusd.StoreComposer, handler *tusd.UnroutedHandler, dbConn *db.DatabaseConnection, checkInterval time.Duration, log *zerolog.Logger) *Expirer {
 	expirer := &Expirer{
 		ticker:   time.NewTicker(checkInterval),
-		store:    store,
 		quitChan: make(chan struct{}),
+		composer: composer,
+		handler:  handler,
+		dbConn:   dbConn,
 		log:      log,
 	}
 
@@ -50,21 +57,13 @@ func (expirer *Expirer) Stop() {
 	close(expirer.quitChan)
 }
 
+// TODO add cleanup of old database entries with config for age
 func (expirer *Expirer) gc(t time.Time) {
 	expirer.log.Debug().
 		Str("event", "gc_tick").
 		Msg("Filestore GC tick")
 
-	var expiredIds []string
-	err := db.Select(expirer.store.DBConn, &expiredIds, `
-		SELECT id
-		FROM uploads
-		WHERE deleted = 0 AND (
-			expires_at <= ? OR (expires_at IS NULL AND created_at <= ?)
-		)`,
-		time.Now().Unix(),
-		time.Now().Unix()-86400, // 1 day
-	)
+	expiredIds, err := expirer.dbConn.FetchExpiredIds()
 	if err != nil {
 		expirer.log.Error().
 			Err(err).
@@ -73,16 +72,26 @@ func (expirer *Expirer) gc(t time.Time) {
 	}
 
 	for _, id := range expiredIds {
-		err = expirer.store.Terminate(id)
-		if err != nil {
+		resp := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodDelete, id, nil)
+
+		expirer.handler.DelFile(resp, req)
+
+		if resp.Code == 404 {
+			// Upload is not found, must have already been removed
+			expirer.dbConn.TerminateUpload(id, 0)
+		} else if resp.Code != 204 {
 			expirer.log.Error().
-				Err(err).
-				Msg("Failed to terminate expired upload")
+				Err(errors.New(resp.Body.String())).
+				Msg("Failed to terminate upload")
 			continue
 		}
+
 		expirer.log.Info().
 			Str("event", "expired").
 			Str("id", id).
 			Msg("Terminated upload id")
+
+		time.Sleep(1 * time.Second)
 	}
 }

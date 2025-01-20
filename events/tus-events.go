@@ -3,8 +3,8 @@ package events
 import (
 	"sync"
 
-	"github.com/tus/tusd/cmd/tusd/cli/hooks"
-	"github.com/tus/tusd/pkg/handler"
+	"github.com/tus/tusd/v2/pkg/handler"
+	"github.com/tus/tusd/v2/pkg/hooks"
 )
 
 // how many events can be unread by a listener before everything starts to block
@@ -60,14 +60,14 @@ func (b *TusEventBroadcaster) Unlisten(listener chan *TusEvent) {
 func (b *TusEventBroadcaster) readLoop(handler *handler.UnroutedHandler) {
 	for {
 		select {
-		case info := <-handler.CompleteUploads:
-			b.broadcast(hooks.HookPostFinish, info)
 		case info := <-handler.TerminatedUploads:
 			b.broadcast(hooks.HookPostTerminate, info)
 		case info := <-handler.UploadProgress:
 			b.broadcast(hooks.HookPostReceive, info)
 		case info := <-handler.CreatedUploads:
 			b.broadcast(hooks.HookPostCreate, info)
+		case info := <-handler.CompleteUploads:
+			b.broadcast(hooks.HookPostFinish, info)
 		case _, ok := <-b.quitChan:
 			if !ok {
 				return

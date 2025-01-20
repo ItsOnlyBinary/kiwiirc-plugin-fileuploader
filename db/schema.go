@@ -1,4 +1,4 @@
-package shardedfilestore
+package db
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 )
 
-func (store *ShardedFileStore) initDB() {
+func (dBConn *DatabaseConnection) applyMigrations() {
 	migrations := &migrate.MemoryMigrationSource{
 		Migrations: []*migrate.Migration{
 			{
@@ -92,8 +92,8 @@ func (store *ShardedFileStore) initDB() {
 						SELECT id, uploader_ip, sha256sum, created_at, deleted,
 						CASE WHEN jwt_account IS NULL THEN '' ELSE jwt_account END,
 						CASE WHEN jwt_issuer IS NULL THEN '' ELSE jwt_issuer END,
-						CASE WHEN jwt_account IS NOT NULL THEN created_at + ` + fmt.Sprintf("%.0f", store.ExpireIdentifiedTime.Seconds()) + `
-						ELSE created_at + ` + fmt.Sprintf("%.0f", store.ExpireTime.Seconds()) + ` END
+						CASE WHEN jwt_account IS NOT NULL THEN created_at + ` + fmt.Sprintf("%.0f", dBConn.cfg.Expiration.IdentifiedMaxAge.Duration.Seconds()) + `
+						ELSE created_at + ` + fmt.Sprintf("%.0f", dBConn.cfg.Expiration.MaxAge.Duration.Seconds()) + ` END
 					 	as expires_at
 						FROM uploads
 					;`,
@@ -107,11 +107,11 @@ func (store *ShardedFileStore) initDB() {
 					`
 					CREATE TABLE new_uploads(
 						id VARCHAR(36) PRIMARY KEY,
-						uploader_ip VARCHAR(45),
+						uploader_ip VARCHAR(45) NOT NULL,
 						sha256sum BLOB,
-						created_at INTEGER,
-						expires_at INTEGER,
-						deleted INTEGER(1) DEFAULT 0 NOT NULL,
+						created_at INTEGER NOT NULL,
+						expires_at INTEGER DEFAULT -1 NOT NULL,
+						deleted_at INTEGER DEFAULT -1 NOT NULL,
 						file_name TEXT DEFAULT '' NOT NULL,
 						file_type TEXT DEFAULT '' NOT NULL,
 						file_size BIGINT TEXT DEFAULT -1 NOT NULL,
@@ -120,7 +120,7 @@ func (store *ShardedFileStore) initDB() {
 						jwt_issuer TEXT DEFAULT '' NOT NULL
 					);`,
 					`
-					INSERT INTO new_uploads(id, uploader_ip, sha256sum, created_at, expires_at, deleted, jwt_account, jwt_issuer)
+					INSERT INTO new_uploads(id, uploader_ip, sha256sum, created_at, expires_at, deleted_at, jwt_account, jwt_issuer)
 						SELECT id, uploader_ip, sha256sum, created_at, expires_at, deleted, jwt_account, jwt_issuer
 						FROM uploads
 					;`,
@@ -131,13 +131,13 @@ func (store *ShardedFileStore) initDB() {
 		},
 	}
 
-	n, err := migrate.Exec(store.DBConn.DB.DB, store.DBConn.DriverName, migrations, migrate.Up)
+	n, err := migrate.Exec(dBConn.DB.DB, dBConn.DBConfig.DriverName, migrations, migrate.Up)
 	if err != nil {
-		store.log.Fatal().Err(err).Msg("Failed to apply migrations")
+		dBConn.log.Fatal().Err(err).Msg("Failed to apply migrations")
 	}
 
 	if n > 0 {
-		store.log.Info().
+		dBConn.log.Info().
 			Str("event", "schema_migrations").
 			Int("count", n).Msg("Applied schema migrations")
 	}

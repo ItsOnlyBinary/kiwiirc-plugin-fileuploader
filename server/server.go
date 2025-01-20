@@ -77,8 +77,10 @@ func (runCtx *RunContext) runLoop() {
 
 	for {
 		// new server instance
-		serv := UploadServer{}
 		cfg := config.NewConfig()
+		serv := UploadServer{
+			cfg: cfg,
+		}
 
 		// refresh config
 		md, err := cfg.Load(runCtx.log, runCtx.configPath)
@@ -86,8 +88,6 @@ func (runCtx *RunContext) runLoop() {
 			runCtx.log.Error().Err(err).Msg("Failed to load config")
 			os.Exit(1)
 		}
-
-		serv.cfg = *cfg
 
 		multiLogger, err := config.CreateMultiLogger(serv.cfg.Loggers)
 		if err != nil {

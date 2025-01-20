@@ -20,9 +20,16 @@ export default function acquireExtjwtBeforeUpload(uppy, tokenManager) {
             const maybeToken = tokenManager.get(network);
             if (maybeToken instanceof Promise) {
                 awaitingPromises.push(maybeToken);
+                fileObj.maybeToken = maybeToken;
+            } else {
+                uppy.setFileState(fileObj.id, {
+                    tus: {
+                        headers: {
+                            Authorization: maybeToken,
+                        },
+                    },
+                });
             }
-
-            fileObj.meta.extjwt = maybeToken;
         });
 
         if (awaitingPromises.length) {
@@ -32,8 +39,15 @@ export default function acquireExtjwtBeforeUpload(uppy, tokenManager) {
 
                 for (let i = 0; i < files.length; i++) {
                     const fileObj = files[i];
-                    // eslint-disable-next-line no-await-in-loop
-                    fileObj.meta.extjwt = await fileObj.meta.extjwt;
+                    uppy.setFileState(fileObj.id, {
+                        tus: {
+                            headers: {
+                                // eslint-disable-next-line no-await-in-loop
+                                Authorization: await fileObj.maybeToken,
+                            },
+                        },
+                    });
+                    delete fileObj.maybeToken;
                 }
             });
         }
