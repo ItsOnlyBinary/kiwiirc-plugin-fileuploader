@@ -42,7 +42,6 @@ type Config struct {
 	Storage struct {
 		Path              string
 		ShardLayers       int
-		ExifRemove        bool
 		MaximumUploadSize datasize.ByteSize
 	}
 	Database struct {
@@ -135,7 +134,7 @@ func CreateMultiLogger(loggerConfigs []LoggerConfig) (*zerolog.Logger, error) {
 		url := loggerCfg.Output.URL
 		switch url.Scheme {
 		case "file":
-			file, err := os.OpenFile(url.Path + url.Opaque, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0640)
+			file, err := os.OpenFile(url.Path+url.Opaque, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0640)
 			if err != nil {
 				return nil, err
 			}
