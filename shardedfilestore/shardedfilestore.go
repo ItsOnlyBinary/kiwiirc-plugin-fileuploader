@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -43,6 +44,7 @@ type ShardedFileStore struct {
 	PrefixShardLayers    int           // Number of extra directory layers to prefix file paths with.
 	ExpireTime           time.Duration // How long before an upload expires (seconds)
 	ExpireIdentifiedTime time.Duration // How long before an upload expires with valid account (seconds)
+	FileTypes            config.FileTypes
 	PreFinishCommands    []config.PreFinishCommand
 	DBConn               *db.DatabaseConnection
 	log                  *zerolog.Logger
@@ -52,12 +54,13 @@ type ShardedFileStore struct {
 // be used as the only storage entry. This method does not check
 // whether the path exists, use os.MkdirAll to ensure.
 // In addition, a locking mechanism is provided.
-func New(basePath string, prefixShardLayers int, expireTime, expireIdentifiedTime time.Duration, PreFinishCommands []config.PreFinishCommand, dbConnection *db.DatabaseConnection, log *zerolog.Logger) *ShardedFileStore {
+func New(basePath string, prefixShardLayers int, expireTime, expireIdentifiedTime time.Duration, fileTypes config.FileTypes, PreFinishCommands []config.PreFinishCommand, dbConnection *db.DatabaseConnection, log *zerolog.Logger) *ShardedFileStore {
 	store := &ShardedFileStore{
 		BasePath:             basePath,
 		PrefixShardLayers:    prefixShardLayers,
 		ExpireTime:           expireTime,
 		ExpireIdentifiedTime: expireIdentifiedTime,
+		FileTypes:            fileTypes,
 		PreFinishCommands:    PreFinishCommands,
 		DBConn:               dbConnection,
 		log:                  log,
@@ -301,6 +304,15 @@ func (upload *FileUpload) FinishUpload(ctx context.Context) error {
 		upload.store.log.Error().
 			Err(err).
 			Msg("Failed resolve path in ExecuteCommands")
+	}
+
+	if ok, detectedType := upload.store.isAllowedFileType(absPath); !ok {
+		upload.store.Terminate(upload.info.ID)
+		upload.store.log.Warn().
+			Err(err).
+			Str("detectedType", detectedType).
+			Msg("Upload has been reject by server")
+		return handler.NewHTTPError(errors.New("Upload has been reject by server"), 406)
 	}
 
 	for _, preFinish := range upload.store.PreFinishCommands {
@@ -623,6 +635,55 @@ func (store ShardedFileStore) completeBinPath(hashBytes []byte) string {
 	hash := fmt.Sprintf("%x", hashBytes)
 	shards := store.shards(hash)
 	return filepath.Join(store.BasePath, "complete", shards, hash+".bin")
+}
+
+func (store ShardedFileStore) isAllowedFileType(filePath string) (bool, string) {
+	if len(store.FileTypes.Allowed) == 0 && len(store.FileTypes.Disallowed) == 0 {
+		return true, ""
+	}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		store.log.Error().
+			Err(err).
+			Msg("Failed load local file")
+		return false, ""
+	}
+	defer file.Close()
+
+	buffer := make([]byte, 512)
+	_, err = file.Read(buffer)
+	if err != nil {
+		store.log.Error().
+			Err(err).
+			Msg("Failed read local file")
+		return false, ""
+	}
+
+	detectedFileType := http.DetectContentType(buffer)
+
+	allowed := false
+	if len(store.FileTypes.Allowed) > 0 {
+		for _, allow := range store.FileTypes.Allowed {
+			if wildcard.Match(allow, detectedFileType) {
+				allowed = true
+				break
+			}
+		}
+	} else {
+		allowed = true
+	}
+
+	if len(store.FileTypes.Disallowed) > 0 {
+		for _, allow := range store.FileTypes.Allowed {
+			if wildcard.Match(allow, detectedFileType) {
+				allowed = false
+				break
+			}
+		}
+	}
+
+	return allowed, detectedFileType
 }
 
 func durationToExpire(d time.Duration) int64 {

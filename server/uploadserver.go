@@ -64,6 +64,7 @@ func (serv *UploadServer) Run(replaceableHandler *ReplaceableHandler) error {
 		serv.cfg.Storage.ShardLayers,
 		serv.cfg.Expiration.MaxAge.Duration,
 		serv.cfg.Expiration.IdentifiedMaxAge.Duration,
+		serv.cfg.FileTypes,
 		serv.cfg.PreFinishCommands,
 		serv.DBConn,
 		serv.log,
