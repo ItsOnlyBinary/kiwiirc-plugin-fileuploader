@@ -114,7 +114,7 @@ func (store *ShardedFileStore) initDB() {
 						deleted INTEGER(1) DEFAULT 0 NOT NULL,
 						file_name TEXT DEFAULT '' NOT NULL,
 						file_type TEXT DEFAULT '' NOT NULL,
-						file_size BIGINT TEXT DEFAULT -1 NOT NULL,
+						file_size BIGINT DEFAULT -1 NOT NULL,
 						jwt_nick TEXT DEFAULT '' NOT NULL,
 						jwt_account TEXT DEFAULT '' NOT NULL,
 						jwt_issuer TEXT DEFAULT '' NOT NULL
